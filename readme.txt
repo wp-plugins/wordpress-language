@@ -7,7 +7,7 @@ Requires at least: 3.2
 Tested up to: 3.4.2
 Stable tag: 1.0.0
 
-Run localized WordPress sites easily. Select the language and everything else happen automatically.
+Run localized WordPress sites easily. Select the language and everything else happens automatically.
 
 == Description ==
 
