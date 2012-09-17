@@ -36,7 +36,7 @@ Running a multilingual site is a lot easier and more efficient than having sever
 
 == Installation ==
 
-1. Upload 'types' to the '/wp-content/plugins/' directory
+1. Upload 'wordpress-language' to the '/wp-content/plugins/' directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
 
 
