@@ -1,11 +1,11 @@
 === WordPress Language ===
 Contributors: brucepearson, AmirHelzer
 Donate link: http://wpml.org/documentation/related-projects/wordpress-language/
-Tags: localization, translation, i18n, language, gettext, mo, po
+Tags: localization, translation, i18n, language, gettext, mo, po, international
 License: GPLv2
 Requires at least: 3.2
 Tested up to: 3.4.2
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 
 Run localized WordPress sites easily. Select the language and everything else happens automatically.
 
@@ -33,6 +33,9 @@ You don't need to install any .mo files or edit your wp-config.php to switch lan
 When you need to run multilingual sites, you're welcome to try [WPML](http://wpml.org). You'll be able to run several languages on the same site from one database.
 
 Running a multilingual site is a lot easier and more efficient than having several WordPress sites - one for each language.
+
+= FEATURE SUGGESTIONS and QUESTIONS =
+WordPress Language is evolving. To suggest new features or ask a quesion, visit [WordPress Language plugin page](http://wpml.org/documentation/related-projects/wordpress-language/).
 
 == Installation ==
 
@@ -70,3 +73,6 @@ No. WordPress Language sets one single language for your site. For multilingual 
 
 = 1.0.0 =
 * First release
+
+= 1.0.1 =
+* Text changes
