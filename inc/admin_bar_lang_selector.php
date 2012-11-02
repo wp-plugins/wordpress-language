@@ -58,6 +58,26 @@ function admin_bar_render_lang_selector() {
                 'title' => __('More languages...', 'wordpress-language'),
                 )
         ));
+
+        $current_locale = get_option('wp_language_locale_front');
+        if(empty($current_locale)){
+            $current_locale = get_locale();
+        }
+        
+        if(!empty($WordPress_language->settings['different_languages'])){
+            $current_lang_code = $WordPress_language->get_lang_code($current_locale);
+            $current_lang = $WordPress_language->get_own_lang_name($current_lang_code);
+            
+            $wp_admin_bar->add_menu( array(
+                'parent' => $parent,
+                'id' => 'WP_LANG_change_front_page_language',
+                'title' => sprintf(__('Change language for public pages (currently %s %s - %s)', 'wordpress-language'), $WordPress_language->get_flag($current_lang_code), $current_lang, $current_lang_code),
+                'href'  => admin_url('options-general.php?page=wordpress_language&scope=front-end' ),
+                'meta'  => array()
+            ));
+        }
+        
+        
         
     }    
 }

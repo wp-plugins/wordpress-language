@@ -9,7 +9,7 @@ if (!defined('ICL_STRING_TRANSLATION_NOT_TRANSLATED')) {
 }
 
 class ST_MO_Downloader{
-    const   LOCALES_XML_FILE = 'http://icanlocalze-static.icanlocalize.com/wp-locales.xml.gz';
+    const   LOCALES_XML_FILE = 'http://d2pf4b3z51hfy8.cloudfront.net/wp-locales.xml.gz';    
     
     const   CONTEXT = 'WordPress';
     private $settings;
@@ -22,15 +22,19 @@ class ST_MO_Downloader{
         
         $wpversion = preg_replace('#-(.+)$#', '', $wp_version);
         
+        $fh = fopen(WP_LANG_PATH . '/res/lang-map.csv', 'r');
+        while(list($locale, $code) = fgetcsv($fh)){
+            $this->lang_map[$locale] = $code;            
+        }   
+        $this->lang_map_rev =& array_flip($this->lang_map);
+        
+        
         $this->settings = get_option('icl_adl_settings');
         
         if(empty($this->settings['wp_version']) || version_compare($wp_version, $this->settings['wp_version'], '>')){
+            
             $this->updates_check(array('trigger' => 'wp-update'));
         }
-        
-        add_action('wp_ajax_icl_adm_updates_check', array($this, 'show_updates'));
-        add_action('wp_ajax_icl_adm_save_preferences', array($this, 'save_preferences'));
-        
             
     }
     
@@ -52,95 +56,124 @@ class ST_MO_Downloader{
         $updates = array();
         
         foreach($active_languages as $code => $language){
-            
-            $this->set_translation($code, $updates);
-            
+            $this->set_translation($code, $updates); //&$updates
             $locales = $this->get_locales($code);
             foreach ($locales as $locale => $data) {
-                $this->set_translation($locale, $updates);
+                $this->set_translation($locale, $updates); //&$updates
             }
-            
         }
         
         $this->settings['wp_version'] = $wpversion;
         
         $this->settings['last_time_xml_check'] = time();
         $this->settings['last_time_xml_check_trigger'] = $trigger;
+                
         $this->save_settings();
         
         return $updates;
         
     }
 
-    function set_translation($code_or_locale, &$updates) {
-        if(isset($this->translation_files[$code_or_locale]['core'])){
-            $int = preg_match('@tags/([^/]+)/@', $this->translation_files[$code_or_locale]['core'], $matches);   
-            if($int){
-                $version = $matches[1];                        
-                if(empty($this->settings['translations'][$code_or_locale]['installed']) 
-                        || version_compare($this->settings['translations'][$code_or_locale]['installed'], $version, '<')){
-                    $updates['languages'][$code_or_locale] = $version;    
+    function load_xml($reload = false){
+        if(!class_exists('WP_Http')) include_once ABSPATH . WPINC . '/class-http.php';
+        $client = new WP_Http();
+        $response = $client->request(self::LOCALES_XML_FILE, array('timeout'=>15, 'decompress'=>false));
+        
+        if(is_wp_error($response)){
+            throw new Exception(__('Failed downloading the language information file. Please go back and try a little later.', 'wordpress-language'));     
+        }else{
+            if($response['response']['code'] == 200){
+                $this->xml = new SimpleXMLElement(wp_trans_gzdecode($response['body']));
+            }
+        }
+    }
+
+    function get_locales($lang_code) {
+        $locales = array();
+        $locales_result = $this->xml->xpath($lang_code);
+        if($locales_result){
+            foreach($locales_result[0] as $locale => $data){
+                $locales[$this->lang_map_rev[$locale]] = $this->get_mo_file_urls($lang_code, $locale);    
+            }    
+        }
+        return $locales;
+    }
+
+    function get_translation_files(){
+        global $WordPress_language;
+        
+        $active_languages = $WordPress_language->get_languages();
+        
+        foreach($active_languages as $code => $language){
+            $locales = $this->get_locales($code);
+            foreach ($locales as $locale => $projects) {
+                foreach($projects as $project_name => $project_data){
+                    $this->translation_files[$locale][$project_name] = $project_data;    
                 }
-                $this->settings['translations'][$code_or_locale]['available'] = $version;                            
-            }else{
-                $int = preg_match('@/trunk/@', $this->translation_files[$code_or_locale]['core']);   
-                if($int){
-                    $this->settings['translations'][$code_or_locale]['available'] = 'trunk';                            
-                }                        
-            } 
+            }
+        }
+          
+        return $this->translation_files;
+    }
+    
+    function set_translation($code_or_locale, &$updates) {
+        if(isset($this->translation_files[$code_or_locale]['core']['signature'])){
+            $signature = $this->translation_files[$code_or_locale]['core']['signature'];                            
+            $updates['languages'][$code_or_locale] = $signature;    
+            $this->settings['translations'][$code_or_locale]['available'] = $signature;                            
         }
     }
     
-    function show_updates(){
-        global $sitepress;
+    function get_mo_file_urls($lang_code, $locale){
+        global $wp_version;        
         
-        $html = '';
+        $wpversion = preg_replace('#-(.+)$#', '', $wp_version);
+        $wpversion = join('.', array_slice(explode('.', $wpversion), 0, 2)) . '.x';
         
-        try{
-            $updates = $this->updates_check();
+        $mo_files = array();
+        
+        if(empty($this->xml)){
+            $this->load_xml();
+        }
+        
+        $projects = $this->xml->xpath($lang_code . '/' . $locale);
+        if(!empty($projects)){
             
-            if(!empty($updates)){
-                $html .= '<table>';
-            
-            
-                foreach($updates['languages'] as $language => $version){
-                    $l = $sitepress->get_language_details($language);
-
-                    $html .= '<tr>';
-                    $html .= '<td>' . sprintf(__("Updated %s translation is available for WordPress %s.", 'wpml-string-translation'), 
-                        '<strong>' . $l['display_name'] . '</strong>' , '<strong>' . $version . '</strong>') . '</td>';
-                    $html .= '<td align="right">';
-                    $html .= '<a href="' . admin_url('admin.php?page=' . WPML_ST_FOLDER . '/menu/string-translation.php&amp;download_mo=' . $language . '&amp;version=' . $version) . '" class="button-secondary">' .  __('Review changes and update', 'wpml-string-translation') . '</a>'; 
-                    $html .= '</td>';
-                    $html .= '<tr>';
-                    $html .= '</tr>';
+            $project_names = array();
+            foreach($projects[0] as $project_name => $data){
+                // subprojects
+                if(empty($data->versions)){
+                    $subprojects = $this->xml->xpath($lang_code . '/' . $locale . '/' . $project_name);
+                    if(!empty($subprojects)){
+                        foreach($subprojects[0] as $sub_project_name => $sdata){
+                            $project_names[] = $project_name . '/' . $sub_project_name ;    
+                        }    
+                    }
+                }else{
+                    $project_names[] = $project_name;
                 }
-
-            
-                $html .= '</table>';
-            }else{
-                $html .= __('No newer versions found.', 'wpml-string-translation');    
             }
             
-        }catch(Exception $error){
-            $html .= '<span style="color:#f00" >' . $error->getMessage() . '</span>';    
+            if(!empty($project_names)){
+                foreach($project_names as $project_name){
+                    // try to get the corresponding version
+                    $locv_path = $this->xml->xpath("{$lang_code}/{$locale}/{$project_name}/versions/version[@number=\"" . $wpversion . "\"]");
+                    // try to get the dev recent version
+                    if(empty($locv_path)){
+                        $locv_path = $this->xml->xpath("{$lang_code}/{$locale}/{$project_name}/versions/version[@number=\"dev\"]");
+                    }
+                    if(!empty($locv_path)){
+                        $mo_files[$project_name]['url']         = (string)$locv_path[0]->url;
+                        $mo_files[$project_name]['signature']   = (string)$locv_path[0]['signature'];
+                        $mo_files[$project_name]['translated']  = (string)$locv_path[0]['translated'];
+                        $mo_files[$project_name]['untranslated']= (string)$locv_path[0]['untranslated'];                    
+                    }                    
+                }
+            }
         }
+
+        return $mo_files;
         
-        echo json_encode(array('html' => $html));
-        exit;
-        
-    }
-    
-    function save_preferences(){
-        global $sitepress;
-        
-        $iclsettings['st']['auto_download_mo'] = @intval($_POST['auto_download_mo']);
-        $iclsettings['hide_upgrade_notice'] = implode('.', array_slice(explode('.', ICL_SITEPRESS_VERSION), 0, 3));
-        $sitepress->save_settings($iclsettings);
-        
-        echo json_encode(array('enabled' => $iclsettings['st']['auto_download_mo']));
-        
-        exit;
     }
     
     function save_settings(){
@@ -151,108 +184,9 @@ class ST_MO_Downloader{
         return isset($this->settings[$name]) ? $this->settings[$name] : null;
     }
     
-    function load_xml($reload = false){
-        if(!class_exists('WP_Http')) include_once ABSPATH . WPINC . '/class-http.php';
-        $client = new WP_Http();
-        $response = $client->request(self::LOCALES_XML_FILE, array('timeout'=>15, 'decompress'=>false));
-        
-        if(is_wp_error($response)){
-            throw new Exception(__('Failed downloading the language information file. Please go back and try a little later.', 'wpml-string-translation'));     
-        }else{
-            if($response['response']['code'] == 200){
-                $this->xml = new SimpleXMLElement(wp_trans_gzdecode($response['body']));
-                //$this->xml = new SimpleXMLElement($response['body']);
-            }
-        }
-    }
-    
-    function get_locales($lang_code) {
-        $locales = array();
-        $other_locales = $this->xml->xpath($lang_code);
-        if(is_array($other_locales) && !empty($other_locales)){
-            foreach($other_locales[0] as $key => $locale) {
-                if ($key != 'versions') {
-                    $locale = $lang_code . '_' . $key;
-                    $locales[$locale] = $this->get_mo_file_urls($locale);
-                }
-            }
-        }
-        
-        if (empty($locales)) {
-            // only a single locale.
-            $locales[$lang_code] = $this->get_mo_file_urls($lang_code);
-        }
-        
-        return $locales;
-    }
-    
-    function get_mo_file_urls($locale){
-        global $wp_version;        
-        
-        $wpversion = preg_replace('#-(.+)$#', '', $wp_version)   ;
-        
-        if(false !== strpos($locale, '_')){
-            $exp = explode('_', $locale);    
-            $lpath = $exp[0] . '/' . $exp[1]; 
-        }else{
-            $lpath = $locale;
-        }
-
-        $mo_files = array();
-        
-        
-        $language_path = $this->xml->xpath($lpath . '/versions/version[@number="' . $wpversion . '"]');
-        if(empty($language_path)){
-            $language_path = $this->xml->xpath($lpath . '/versions/version[@number="trunk"]');
-        }
-        if(!empty($language_path)){
-            $mo_files = (array)$language_path[0];                
-            unset($mo_files['@attributes']);
-        }elseif(empty($language_path)){
-            $other_versions = $this->xml->xpath($lpath . '/versions/version');
-            if(is_array($other_versions) && !empty($other_versions)){
-                $most_recent = 0;
-                foreach($other_versions as $v){
-                    $tmpv = (string)$v->attributes()->number;
-                    if(version_compare($tmpv , $most_recent, '>')){
-                        $most_recent = $tmpv;   
-                    }
-                }
-                if($most_recent > 0){
-                    $most_recent_version = $this->xml->xpath($lpath . '/versions/version[@number="' . $most_recent . '"]');
-                    $mo_files['core'] = (string)$most_recent_version[0]->core[0];
-                }
-                
-            }
-        }
-
-        return $mo_files;
-        
-    }
-    
     function is_locale_installed($locale) {
         return isset($this->settings['translations'][$locale]['installed']) &&
                 ($this->settings['translations'][$locale]['installed'] == $this->settings['translations'][$locale]['available']);
-    }
-    
-    function get_translation_files(){
-        global $WordPress_language;
-        
-        $active_languages = $WordPress_language->get_languages();
-        
-        foreach($active_languages as $code => $language){
-            $locales = $this->get_locales($code);
-            foreach ($locales as $locale => $urls) {
-                $this->translation_files[$locale] = $urls;
-                
-                if ($locale == $language['default_locale']) {
-                    $this->translation_files[$code] = $urls;
-                }
-            }
-        }
-                
-        return $this->translation_files;
-        
     }
     
     function get_translations($language, $args = array()){
@@ -267,15 +201,14 @@ class ST_MO_Downloader{
         extract($defaults);
         extract($args, EXTR_OVERWRITE);
         
-        
-        if(isset($this->translation_files[$language][$type])){
+        if(isset($this->translation_files[$language][$type]['url'])){
         
             if(!class_exists('WP_Http')) include_once ABSPATH . WPINC . '/class-http.php';
             $client = new WP_Http();
-            $response = $client->request($this->translation_files[$language][$type], array('timeout'=>15));
+            $response = $client->request($this->translation_files[$language][$type]['url'], array('timeout'=>15));
             
             if(is_wp_error($response)){
-                $err = __('Error getting the translation file. Please go back and try again.', 'wpml-string-translation');
+                $err = __('Error getting the translation file. Please go back and try again.', 'wordpress-language');
                 if(isset($response->errors['http_request_failed'][0])){
                     $err .= '<br />' . $response->errors['http_request_failed'][0];
                 }
@@ -357,11 +290,13 @@ class ST_MO_Downloader{
             }
         }    
         
-        
-        $this->settings['translations'][$language]['time'] = time();
-        $this->settings['translations'][$language]['installed'] = $version;
-        
+        global $WordPress_language;
+        $this->settings['translations'][$WordPress_language->languages->get_locale($language)]['time'] = time();
+        $this->settings['translations'][$WordPress_language->languages->get_locale($language)]['installed'] = $version;
+        $this->settings['translations'][$WordPress_language->languages->get_locale($language)]['strings_in_mo'] = count($data);
+       
         // set the other locales in this language to be uninstalled.
+        /*
         $locales = $this->get_locales($language);
         $current_locale = get_locale();
         $this->settings['translations'][$current_locale]['installed'] = $version;
@@ -373,7 +308,9 @@ class ST_MO_Downloader{
                 }
                 
             }
-        }
+        } 
+        */
+         
         $this->save_settings();
         
     }

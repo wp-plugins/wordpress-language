@@ -14,6 +14,9 @@ class WordPress_language_class {
         $this->languages = new WP_languages();
 
         add_filter('gettext_with_context', array($this, 'icl_sw_filters_gettext_with_context'), 9, 4);
+        
+        $this->settings = get_option('wp_languages_options');
+        $this->current_scope = 'back-end';
     }
     
     function init() {
@@ -28,10 +31,24 @@ class WordPress_language_class {
             add_action('wp_ajax_wp_install_language', array($this, 'ajax_install_language'));
             add_action('wp_ajax_wp_language_check_for_updates', array($this, 'ajax_check_for_updates'));
             add_action('wp_ajax_wp_show_hide_language_selector', array($this, 'ajax_show_hide_language_selector'));
+            add_action('wp_ajax_wp_languages_distinct_languages', array($this, 'ajax_wp_languages_distinct_languages'));
+            
             add_thickbox();
+            
+            if(isset($_GET['page']) && $_GET['page'] == 'wordpress_language'){
+                wp_enqueue_script('wp-trans', WP_LANG_URL . '/res/js/wp-trans.js', 'jquery', WP_LANGUAGE_VERSION);
+                if(isset($_GET['scope']) && $_GET['scope']=='front-end'){
+                    $this->current_scope = 'front-end';
+                }
+            }
+            
+            
+            
         }
         
         add_filter('gettext', array($this, 'icl_sw_filters_gettext'), 9, 3);
+        
+        
     }
 
     function save_selected_locale() {
@@ -47,7 +64,11 @@ class WordPress_language_class {
                         isset($_GET['switch_to']) &&
                         isset($_GET['_wpnonce'])) {
                     if (wp_verify_nonce($_GET['_wpnonce'], 'wp_lang_get_lang_info')) {
-                        update_option('wp_language_locale', $_GET['switch_to']);
+                        if(isset($_GET['scope']) && $_GET['scope'] == 'front-end'){
+                            update_option('wp_language_locale_front', $_GET['switch_to']);
+                        }else{
+                            update_option('wp_language_locale', $_GET['switch_to']);    
+                        }                        
                         $this->language_switched = true;
                     }
                 }
@@ -58,7 +79,12 @@ class WordPress_language_class {
     function locale($locale) {
         $this->save_selected_locale();
         
-        $stored_locale = get_option('wp_language_locale', '');
+        if($this->settings['different_languages'] && !is_admin()){
+            $stored_locale = get_option('wp_language_locale_front');    
+        }else{
+            $stored_locale = get_option('wp_language_locale');
+        }
+        
         
         if ($this->download_lang) {
             $stored_locale = $this->get_locale($this->download_lang);
@@ -91,137 +117,203 @@ class WordPress_language_class {
     function language_menu() {
         
         $icon_url = WP_LANG_URL . '/res/img/wplang_2_32_c.jpg';
-        ?>
-            <div class="icon32" style='background:url("<?php echo $icon_url; ?>") no-repeat;'><br /></div>
-            <h2><?php echo __('WordPress Language', 'wordpress-language'); ?></h2>
-        <?php
         
         global $lang_locales;
         
-        $current_locale = get_locale();
+        if($this->current_scope == 'front-end'){
+            $current_locale = get_option('wp_language_locale_front');    
+        }else{
+            $current_locale = get_locale();    
+        }
         
         $current_lang_code = $this->get_lang_code($current_locale);
         $current_lang = $this->get_own_lang_name($current_lang_code);
         
-        echo '<p>' . sprintf(__('Current language is %s. Current locale is %s.', 'wordpress-language'), 
-                        $this->get_flag($current_lang_code) . $current_lang,
-                        $current_locale) . '</p>';
-
-        if (isset($_GET['download_complete'])) {
-            $this->download_complete_div($current_lang, $current_locale, true);
-        }
-        if (isset($_GET['no_translation_available'])) {
-            $this->no_translation_available_div($current_lang, $current_locale);
-        }
-
-        if (isset($_GET['update_lang']) && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'wp_lang_get_lang_info')) {
-            $update_lang = true;
-        } else {
-            $update_lang = false;
-        }
+        $different_languages = isset($this->settings['different_languages']) ? $this->settings['different_languages'] : 0;
         
-        $ST_MO_Downloader = new ST_MO_Downloader();
-        $wptranslations = $ST_MO_Downloader->get_option('translations');
-        
-        $installing_translations = false;
-        if ($this->language_switched || $update_lang) {
-            // check if we need to download translations.
+        ?>
+            <div class="icon32" style='background:url("<?php echo $icon_url; ?>") no-repeat;'><br /></div>
+            <h2><?php echo __('WordPress Language', 'wordpress-language'); ?></h2>
 
-            if (!$ST_MO_Downloader->is_locale_installed($current_locale)) {
-                
-                $installing_translations = true;
-
-                $this->downloading_div();
-                ?>
-                
-                <?php $this->download_complete_div($current_lang, $current_locale, false); ?>
-                <script type="text/javascript">
-                    jQuery(document).ready(function() {
-                        jQuery.ajax({
-                            url: ajaxurl,
-                            type: 'post',
-                            data: 'action=wp_install_language&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val(),
-                            cache: false,
-                            beforeSend: function () {
-                                
-                            },
-                            success: function (data) {
-                                if (data == '1') {
-                                    jQuery('#wp_language_downloading').hide();
-                                    jQuery('#wp_language_download_complete').fadeIn('slow');
-                                    window.location = '<? echo admin_url('options-general.php?page=wordpress_language&download_complete=1'); ?>';
-                                } else {
-                                    window.location = '<? echo admin_url('options-general.php?page=wordpress_language&no_translation_available=1'); ?>';
-                                }
-                            }
-                        });
-                        
-                    });
-                
-                </script>
-                
-                <?php
-                
-            }
-
-        }
-        
-        if (!$installing_translations) {
+            <label class="menu-name-label" style="padding-top: 10px;">
+                <input name="different_languages" type="radio" value="0" <?php if(!$different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
+                <?php _e('Use the same language for WordPress admin and public pages.'); ?>
+            </label>
+            <br />
+            <label class="menu-name-label" style="padding-top: 10px;">
+                <input name="different_languages" type="radio" value="1" <?php if($different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
+                <?php _e('Use different languages for WordPress admin and public pages.'); ?>
+            </label>
             
-            if (isset($wptranslations[$current_locale]['installed'])) {
-                echo '<p>' . __('Installed translation:', 'wordpress-language') . ' ' . $wptranslations[$current_locale]['installed'] . ' on ' . date("F j, Y @H:i", $wptranslations[$current_locale]['time']) . '</p>';
-                ?>
-                <div id="wp_language_translation_state">
-                    <?php echo $this->current_translation_state($current_lang_code, $current_locale, $wptranslations); ?>
+            <br clear="all" />
+            <br />
+            
+            <div id="menu-management-liquid">
+                <div id="menu-management">            
+                    <div class="nav-tabs-nav" <?php if(empty($different_languages)): ?>style="display: none;"<?php endif; ?>>
+                        <div class="nav-tabs-wrapper">
+                            <div class="nav-tabs" style="padding: 0px; margin-right: -46px; margin-left: 0px;">
+                                <span id="nav-tab-back-end" class="nav-tab<?php if($this->current_scope == 'back-end'): ?> nav-tab-active<?php endif ?>">
+                                    <?php if($this->current_scope != 'back-end'): ?>
+                                        <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language') ?>"><?php endif; ?>
+                                        <?php _e('Back end', 'wordpress-language') ?>
+                                    <?php if($this->current_scope != 'back-end'): ?></a><?php endif; ?>    
+                                </span>
+                                <span id="nav-tab-front-end" class="nav-tab<?php if($this->current_scope == 'front-end'): ?> nav-tab-active<?php endif ?>">
+                                    <?php if($this->current_scope != 'front-end'): ?>
+                                        <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language&scope=front-end') ?>"><?php endif; ?>
+                                        <?php _e('Front end', 'wordpress-language') ?>
+                                    <?php if($this->current_scope != 'front-end'): ?></a><?php endif; ?>    
+                                </span>                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-edit" style="margin-right: 10px;">
+                        <div id="nav-menu-header">
+                            &nbsp;                        
+                        </div>
+                        <div id="post-body" style="border-style: solid;border-width: 1px 0;padding: 10px;">
+                            <div id="post-body-content">
+                                <p><?php echo sprintf(__('Current language is %s. Current locale is %s.', 'wordpress-language'), 
+                                        $this->get_flag($current_lang_code) . $current_lang, $current_locale) ?></p>
+                                <?php 
+                                    if (isset($_GET['download_complete'])) {
+                                        $this->download_complete_div($current_lang, $current_locale, true);
+                                    }
+                                    if (isset($_GET['no_translation_available'])) {
+                                        $this->no_translation_available_div($current_lang, $current_locale); 
+                                    }
+                                    
+                                    if (isset($_GET['update_lang']) && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'wp_lang_get_lang_info')) {
+                                        $update_lang = true;
+                                    } else {
+                                        $update_lang = false;
+                                    }
+                                    
+                                    $ST_MO_Downloader = new ST_MO_Downloader();
+                                    $wptranslations = $ST_MO_Downloader->get_option('translations');
+                                    
+                                    $installing_translations = false;
+                                    if ($this->language_switched || $update_lang) {
+                                        // check if we need to download translations.
+
+                                        if (!$ST_MO_Downloader->is_locale_installed($current_locale)) {
+                                            
+                                            $installing_translations = true;
+
+                                            $this->downloading_div();
+                                            ?>
+                                            
+                                            <?php $this->download_complete_div($current_lang, $current_locale, false); ?>
+                                            <script type="text/javascript">
+                                                jQuery(document).ready(function() {
+                                                    jQuery.ajax({
+                                                        url: ajaxurl,
+                                                        type: 'post',
+                                                        data: 'action=wp_install_language&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val() + '&scope=<?php echo $this->current_scope ?>',
+                                                        cache: false,
+                                                        beforeSend: function () {
+                                                            
+                                                        },
+                                                        success: function (data) {
+                                                            if (data == '1') {
+                                                                jQuery('#wp_language_downloading').hide();
+                                                                jQuery('#wp_language_download_complete').fadeIn('slow');
+                                                                window.location = '<?php echo admin_url('options-general.php?page=wordpress_language&scope=' . $this->current_scope . '&download_complete=1'); ?>';
+                                                            } else {
+                                                                window.location = '<?php echo admin_url('options-general.php?page=wordpress_language&scope=' . $this->current_scope . '&no_translation_available=1'); ?>';
+                                                            }
+                                                        }
+                                                    });
+                                                    
+                                                });
+                                            
+                                            </script>
+                                            
+                                            <?php
+                                            
+                                        }
+
+                                    }
+                                    
+                                    if (!$installing_translations) {
+                                        
+                                        if (isset($wptranslations[$current_locale]['installed'])) {
+                                            echo '<p>' . sprintf(__('Current translation is from %s', 'wordpress-language'), date("F j, Y @H:i", $wptranslations[$current_locale]['time'])) . '</p>';
+                                            ?>
+                                            <div id="wp_language_translation_state">
+                                                <?php echo $this->current_translation_state($current_lang_code, $current_locale, $wptranslations); ?>
+                                            </div>
+                                            <?php
+                                        }
+                                    
+                                        $langs = $this->get_languages(true);
+                                
+                                        if (!isset($_GET['more_langs']) || $_GET['more_langs'] != 1) {
+                                            echo '<a href="#" onclick="jQuery(\'#wp_lang_change_lang\').show(); return false;">' . __('Change language', 'wordpress-language') . '</a>';
+                                            echo '<div id="wp_lang_change_lang" style="display:none;">';
+                                        } else {
+                                            echo '<div id="wp_lang_change_lang">';
+                                        }
+                                            
+                                        ?>
+
+                                        <br /><strong><?php echo __('Select a language', 'wordpress-language'); ?></strong>
+                                    
+                                        <div style="padding:10px;">
+                                            <div class="wp_lang_thickbox" style="padding-bottom:10px">
+                                                <table cellpadding="3">
+                                                    <tr>
+                                                    <?php
+                                                        $count = 0;
+                                                        foreach ($langs as $lang) {
+                                                            if ($count != 0 && !($count % 3)) {
+                                                                echo '</tr><tr>';
+                                                            }
+                                                            $link = '#TB_inline?height=255&width=750&inlineId=wp_lang_switch_popup&modal=true';
+                                                            $link .= '&switch_to=' . $lang['default_locale'];
+                                                            $link .= '&scope=' . $this->current_scope ;
+                                                            
+                                                            echo '<td>' . $this->get_flag($lang['code'])  . '<a href="' . $link . '">' . $this->get_lang_name_in_current_locale($lang['code']) . ' (' . $this->get_own_lang_name($lang['code']) . ')</a></td>';
+                                                            $count++;
+                                                        }
+                                                    ?>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <a href="#" class="button-secondary" onclick="jQuery('#wp_lang_change_lang').hide(); return false;"><?php echo __('Cancel', 'wordpress-language'); ?></a>
+                                        </div>
+                                    <?php echo '</div>'; ?>
+                                    
+                                        <?php if(empty($different_languages) || $this->current_scope == 'back-end'): ?>
+                                        <br />
+                                        <?php $show_lang_switcher = get_option('wp_language_show_switcher', 'on') == 'on' ? ' checked="checked"' : '';?>
+                                        <p><label><input type="checkbox" id="wp_lang_show_hide_selector" <?php echo $show_lang_switcher; ?> onclick="wp_lang_show_hide_selector();"/> <?php echo __('Show a language selector in the WordPress admin bar', 'wordpress-language'); ?></label>
+                                        <?php endif; ?>
+                                    
+                                        <?php
+                                    }
+                                ?>
+                                
+                            </div>
+                            <br clear="all" />
+                        </div>
+                        <div id="nav-menu-footer">
+                            &nbsp;     
+                        </div>                        
+                    </div>
                 </div>
-                <?php
-            }
-        
-            $langs = $this->get_languages(true);
-    
-            if (!isset($_GET['more_langs']) || $_GET['more_langs'] != 1) {
-                echo '<a href="#" onclick="jQuery(\'#wp_lang_change_lang\').show(); return false;">' . __('Change language', 'wordpress-language') . '</a>';
-                echo '<div id="wp_lang_change_lang" style="display:none;">';
-            } else {
-                echo '<div id="wp_lang_change_lang">';
-            }
-                
-            ?>
-
-            <br /><strong><?php echo __('Select a language', 'wordpress-language'); ?></strong>
-        
-            <div style="padding:10px;">
-            <div class="wp_lang_thickbox" style="padding-bottom:10px"><table cellpadding="3"><tr>
-            <?php
-
-                $count = 0;
-                foreach ($langs as $lang) {
-                    if ($count != 0 && !($count % 3)) {
-                        echo '</tr><tr>';
-                    }
-                    $link = '#TB_inline?height=255&width=750&inlineId=wp_lang_switch_popup&modal=true';
-                    $link .= '&switch_to=' . $lang['default_locale'];
-                    
-                    echo '<td>' . $this->get_flag($lang['code'])  . '<a href="' . $link . '">' . $this->get_lang_name_in_current_locale($lang['code']) . ' (' . $this->get_own_lang_name($lang['code']) . ')</a></td>';
-                    $count++;
-                }
-            ?>
-            </tr></table></div>
-            <a href="#" class="button-secondary" onclick="jQuery('#wp_lang_change_lang').hide(); return false;"><?php echo __('Cancel', 'wordpress-language'); ?></a>
-            </div></div>
-
-            <br />
-            <?php $show_lang_switcher = get_option('wp_language_show_switcher', 'on') == 'on' ? ' checked="checked"' : '';?>
-            <p><label><input type="checkbox" id="wp_lang_show_hide_selector" <?php echo $show_lang_switcher; ?> onclick="wp_lang_show_hide_selector();"/> <?php echo __('Show a language selector in the WordPress admin bar', 'wordpress-language'); ?></label>
-            <br />
-            <div id="wp_language_wpml_promotion">
-                <?php echo $this->wpml_promotion(); ?>
             </div>
 
-            <?php
+            <br />
+            <div id="wp_language_wpml_promotion" style="clear: both;">
+                <?php echo $this->wpml_promotion(); ?>
+            </div>
             
             
-        }
+        <?php
+        
+        
         
         
     }
@@ -229,10 +321,11 @@ class WordPress_language_class {
     function current_translation_state($current_lang_code, $current_locale, $wptranslations, $ajax = false) {
     
         if ($wptranslations[$current_locale]['installed'] != $wptranslations[$current_locale]['available']) {
-            echo '<p>' . __('Available translation: New translation is available for', 'wordpress-language') . ' ' . $wptranslations[$current_locale]['available'] . '</p>';
+            
+            echo '<p>' . __('Updated translation is available.', 'wordpress-language')  . '</p>';
             $nonce = wp_create_nonce('wp_lang_get_lang_info');
-            $url = admin_url('options-general.php?page=wordpress_language&update_lang=1&_wpnonce=' . $nonce);
-            echo ' <a href="' . $url . '" class="button-secondary">' . __('Update now', 'wordpress-language') . '</a>';
+            $url = admin_url('options-general.php?page=wordpress_language&update_lang=1&scope='.$this->current_scope.'&_wpnonce=' . $nonce);
+            echo ' <a href="' . $url . '" class="button-secondary">' . __('Update now', 'wordpress-language') . '</a><br clear="all" /><br />';
         } else {
             if ($ajax) {
                 ?>
@@ -254,7 +347,7 @@ class WordPress_language_class {
                         jQuery.ajax({
                             url: ajaxurl,
                             type: 'post',
-                            data: 'action=wp_language_check_for_updates&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val(),
+                            data: 'action=wp_language_check_for_updates&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val() + '&scope=<?php echo $this->current_scope ?>',
                             cache: false,
                             beforeSend: function () {
                                 
@@ -272,7 +365,12 @@ class WordPress_language_class {
     }
 
     function downloading_div() {    
-        $current_locale = get_locale();
+        if($this->current_scope == 'front-end'){
+            $current_locale = get_option('wp_language_locale_front');    
+        }else{
+            $current_locale = get_locale();
+        }
+        
         $current_lang_code = $this->get_lang_code($current_locale);
         $current_lang = $this->get_own_lang_name($current_lang_code);
         ?>
@@ -306,7 +404,7 @@ class WordPress_language_class {
             <div id="wp_language_no_translation_available">
                 <img src="<?php echo WP_LANG_URL; ?>/res/img/alert.png">
                 <strong>
-                    <?php echo sprintf(__('There is no translations available for %s.', 'wordpress-language'), $current_lang . ' (' . $current_locale . ')'); ?>
+                    <?php echo sprintf(__('There is no translation available for %s.', 'wordpress-language'), $current_lang . ' (' . $current_locale . ')'); ?>
                 </strong>
             </div>
             <br />
@@ -402,6 +500,8 @@ class WordPress_language_class {
                 var original_lang_switch_form = null;
                 
                 var wp_lang_switch_target = '<?php echo admin_url('options-general.php?page=wordpress_language'); ?>';
+                
+                var wp_lang_ajx_spinner = '<img src="<?php echo WP_LANG_URL; ?>/res/img/ajax-loader-big.gif">';
 
                 function wp_lang_lang_switch() {
                     var locale = jQuery('input[name="wp_lang_locale\\[\\]"]:checked').val();
@@ -447,7 +547,7 @@ class WordPress_language_class {
                             jQuery.ajax({
                                 url: ajaxurl,
                                 type: 'post',
-                                data: 'action=wp_language_get_info&lang=' + lang + '&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val(),
+                                data: 'action=wp_language_get_info&lang=' + lang + '&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val() + '&scope=<?php echo $this->current_scope ?>',
                                 cache: false,
                                 beforeSend: function () {
                                     
@@ -490,7 +590,7 @@ class WordPress_language_class {
     
     function wpml_promotion() {
         ?>
-        <div style="margin:3em 1em 1em 1em; padding: 1em; border: 1pt solid #E0E0E0; background-color: #F4F4F4;">
+        <div style="margin:3em 1em 1em 0em; padding: 1em; border: 1pt solid #E0E0E0; background-color: #F4F4F4;">
 
         <p><h3><?php echo __('Did you know that a single WordPress site can have multiple languages?', 'wordpress-language'); ?></h3></p>
 
@@ -511,6 +611,7 @@ class WordPress_language_class {
     
     function ajax_get_lang_info() {
 		$nonce = $_POST['_wpnonce'];
+                
 		if (wp_verify_nonce( $nonce, 'wp_lang_get_lang_info') ) {
             
             
@@ -540,9 +641,9 @@ class WordPress_language_class {
                 $click = ' onclick="wp_lang_lang_switch(); return false"';
                 $link = "#";
             } else {
-                echo sprintf(__('Are you sure you want to switch the site\'s language to %s?', 'wordpress-language'), $this->get_lang_name_in_current_locale($lang_code));
+                echo sprintf(__('Are you sure you want to switch the language to %s?', 'wordpress-language'), $this->get_lang_name_in_current_locale($lang_code));
                 echo '<br /><br />';
-                $link = admin_url('options-general.php?page=wordpress_language&switch_to=' . $this->get_locale($lang_code) . '&_wpnonce=' . $nonce);
+                $link = admin_url('options-general.php?page=wordpress_language&switch_to=' . $this->get_locale($lang_code) . '&_wpnonce=' . $nonce . '&scope=' . $_POST['scope']);
                 $click = '';
             }
             
@@ -558,6 +659,7 @@ class WordPress_language_class {
     }
 
     function ajax_install_language() {
+        
 		$nonce = $_POST['_wpnonce'];
 		if (wp_verify_nonce( $nonce, 'wp_lang_get_lang_info') ) {
             $ST_MO_Downloader = new ST_MO_Downloader();
@@ -565,8 +667,13 @@ class WordPress_language_class {
             
             $ST_MO_Downloader->load_xml();
             $ST_MO_Downloader->get_translation_files();
-
-            $current_locale = get_locale();
+            
+            if(isset($_POST['scope']) && $_POST['scope']=='front-end'){
+                $current_locale = get_option('wp_language_locale_front');
+            }else{
+                $current_locale = get_locale();    
+            }
+            
             $current_lang_code = $this->get_lang_code($current_locale);
             $translations = $ST_MO_Downloader->get_translations($current_locale);
             
@@ -577,6 +684,7 @@ class WordPress_language_class {
                 if (isset($translations['updated'])) {
                     $ST_MO_Downloader->save_translations($translations['updated'], $current_lang_code, $wptranslations[$current_locale]['available']);
                 }
+                
                 echo '1';
             } else {
                 echo '0';
@@ -593,7 +701,12 @@ class WordPress_language_class {
             $ST_MO_Downloader->updates_check();
             $wptranslations = $ST_MO_Downloader->get_option('translations');
         
-            $current_locale = get_locale();
+            if($_POST['scope']=='front-end'){
+                $current_locale = get_option('wp_language_locale_front');
+            }else{
+                $current_locale = get_locale();    
+            }
+            
             $current_lang_code = $this->get_lang_code($current_locale);
             
             $this->current_translation_state($current_lang_code, $current_locale, $wptranslations, true);
@@ -629,6 +742,22 @@ class WordPress_language_class {
     function switch_locale($locale) {
         update_option('wp_language_locale', $locale);
         
+    }
+    
+    function ajax_wp_languages_distinct_languages(){
+        if(isset($_POST['value'])){                       
+            $this->settings['different_languages'] = intval($_POST['value']);
+        }
+        update_option('wp_languages_options', $this->settings);
+        
+        if(!get_option('wp_language_locale_front')){
+            update_option('wp_language_locale_front', get_locale());
+        }
+        
+        $resp = array();
+        
+        echo json_encode($resp);
+        exit;
     }
     
 }
