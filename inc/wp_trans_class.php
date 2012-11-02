@@ -120,16 +120,28 @@ class WordPress_language_class {
         
         global $lang_locales;
         
-        if($this->current_scope == 'front-end'){
-            $current_locale = get_option('wp_language_locale_front');    
+        $different_languages = isset($this->settings['different_languages']) ? $this->settings['different_languages'] : 0;
+
+        $current_locale_front = get_option('wp_language_locale_front');    
+        if(empty($current_locale_front)){
+            $current_locale_front = get_locale();
+        }
+        
+        if($different_languages){
+            if($this->current_scope == 'front-end'){
+                $current_locale = $current_locale_front;    
+            }else{
+                $current_locale = get_locale();    
+            }
         }else{
             $current_locale = get_locale();    
         }
         
+        $current_lang_code_front = $this->get_lang_code($current_locale_front);
+        $current_lang_code_back  = $this->get_lang_code(get_locale());
+        
         $current_lang_code = $this->get_lang_code($current_locale);
         $current_lang = $this->get_own_lang_name($current_lang_code);
-        
-        $different_languages = isset($this->settings['different_languages']) ? $this->settings['different_languages'] : 0;
         
         ?>
             <div class="icon32" style='background:url("<?php echo $icon_url; ?>") no-repeat;'><br /></div>
@@ -154,16 +166,18 @@ class WordPress_language_class {
                         <div class="nav-tabs-wrapper">
                             <div class="nav-tabs" style="padding: 0px; margin-right: -46px; margin-left: 0px;">
                                 <span id="nav-tab-back-end" class="nav-tab<?php if($this->current_scope == 'back-end'): ?> nav-tab-active<?php endif ?>">
+                                    <?php echo $this->get_flag($current_lang_code_back) ?>
                                     <?php if($this->current_scope != 'back-end'): ?>
                                         <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language') ?>"><?php endif; ?>
-                                        <?php _e('Back end', 'wordpress-language') ?>
-                                    <?php if($this->current_scope != 'back-end'): ?></a><?php endif; ?>    
+                                        <?php _e('Language for WordPress admin', 'wordpress-language') ?>
+                                    <?php if($this->current_scope != 'back-end'): ?></a><?php endif; ?>                                        
                                 </span>
                                 <span id="nav-tab-front-end" class="nav-tab<?php if($this->current_scope == 'front-end'): ?> nav-tab-active<?php endif ?>">
+                                    <?php echo $this->get_flag($current_lang_code_front) ?>
                                     <?php if($this->current_scope != 'front-end'): ?>
                                         <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language&scope=front-end') ?>"><?php endif; ?>
-                                        <?php _e('Front end', 'wordpress-language') ?>
-                                    <?php if($this->current_scope != 'front-end'): ?></a><?php endif; ?>    
+                                        <?php _e('Language for public pages', 'wordpress-language') ?>
+                                    <?php if($this->current_scope != 'front-end'): ?></a><?php endif; ?>                                        
                                 </span>                                
                             </div>
                         </div>
