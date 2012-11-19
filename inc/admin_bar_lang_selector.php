@@ -52,10 +52,10 @@ function admin_bar_render_lang_selector() {
         $wp_admin_bar->add_menu( array(
             'parent' => $parent,
             'id' => 'WP_LANG_lang_child_more_langs',
-            'title' => __('More languages...', 'wordpress-language'),
+            'title' => '<img style="margin-top:4px;" align="left" src="' . WP_LANG_URL . '/res/img/more-languages.png" />&nbsp;' . __('More languages...', 'wordpress-language'),
             'href'  => admin_url('options-general.php?page=wordpress_language&more_langs=1' ),
             'meta'  => array(
-                'title' => __('More languages...', 'wordpress-language'),
+                'title' => __('More languages...', 'wordpress-language')
                 )
         ));
 
@@ -64,18 +64,29 @@ function admin_bar_render_lang_selector() {
             $current_locale = get_locale();
         }
         
-        if(!empty($WordPress_language->settings['different_languages'])){
-            $current_lang_code = $WordPress_language->get_lang_code($current_locale);
-            $current_lang = $WordPress_language->get_own_lang_name($current_lang_code);
-            
-            $wp_admin_bar->add_menu( array(
-                'parent' => $parent,
-                'id' => 'WP_LANG_change_front_page_language',
-                'title' => sprintf(__('Change language for public pages (currently %s %s - %s)', 'wordpress-language'), $WordPress_language->get_flag($current_lang_code), $current_lang, $current_lang_code),
-                'href'  => admin_url('options-general.php?page=wordpress_language&scope=front-end' ),
-                'meta'  => array()
-            ));
-        }
+        $current_lang_code = $WordPress_language->get_lang_code($current_locale);
+        $current_lang = $WordPress_language->get_own_lang_name($current_lang_code);
+        
+        $ua = false === strpos($_SERVER['HTTP_USER_AGENT'], 'Chrome') ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '';
+                
+        $wp_admin_bar->add_menu( array(
+            'parent' => $parent,
+            'id' => 'WP_LANG_change_front_page_language',
+            'title' => '<img style="margin-top:4px;" align="left" src="' . WP_LANG_URL . '/res/img/public-language.png" />&nbsp;' . sprintf(__('Change language for public pages (currently %s %s - %s)', 'wordpress-language'), $WordPress_language->get_flag($current_lang_code), $current_lang, $current_lang_code) . $ua,
+            'href'  => admin_url('options-general.php?page=wordpress_language&more_langs=1&scope=front-end' ),
+            'meta'  => empty($WordPress_language->settings['different_languages']) ? array('class' => 'hidden') : null
+        ));
+        
+        $wp_admin_bar->add_menu( array(
+            'parent' => $parent,
+            'id' => 'WP_LANG_lang_options',
+            'title' => '<img style="margin-top:4px;" align="left" src="' . WP_LANG_URL . '/res/img/language-options.png" />&nbsp;' . __('Language options', 'wordpress-language'),
+            'href'  => admin_url('options-general.php?page=wordpress_language' ),
+            'meta'  => array(
+                'title' => __('Language options', 'wordpress-language')
+                )
+        ));
+        
         
         
         

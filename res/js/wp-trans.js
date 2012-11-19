@@ -18,6 +18,7 @@ jQuery(document).ready(function(){
                 if(new_val == 1){
                     jQuery(".nav-tabs-nav").fadeIn();
                     jQuery('input[name=different_languages]').removeAttr('disabled');
+                    jQuery('#wp-admin-bar-WP_LANG_change_front_page_language').show();
                 }else{
                     location.href = location.href.replace(/&scope=front-end/, '');
                 }    
@@ -27,5 +28,22 @@ jQuery(document).ready(function(){
         })
         
     })
+    
+    
+    jQuery('#wp_lang_change_lang_cancel').live('click', function(){
+        jQuery('#wp_lang_change_lang').slideUp(function(){
+            jQuery('#wp_lang_change_lang_button').fadeIn();    
+        }); 
+        return false;    
+    })
+    
+    jQuery('#wp_lang_change_lang_button').live('click', function(){
+        jQuery('#wp_lang_change_lang_button').fadeOut(function(){
+            jQuery('#wp_lang_change_lang').slideDown();
+        });
+        
+        return false;    
+    })
+
     
 });

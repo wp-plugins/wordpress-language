@@ -147,21 +147,28 @@ class WordPress_language_class {
             <div class="icon32" style='background:url("<?php echo $icon_url; ?>") no-repeat;'><br /></div>
             <h2><?php echo __('WordPress Language', 'wordpress-language'); ?></h2>
 
-            <label class="menu-name-label" style="padding-top: 10px;">
-                <input name="different_languages" type="radio" value="0" <?php if(!$different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
-                <?php _e('Use the same language for WordPress admin and public pages.'); ?>
-            </label>
             <br />
-            <label class="menu-name-label" style="padding-top: 10px;">
-                <input name="different_languages" type="radio" value="1" <?php if($different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
-                <?php _e('Use different languages for WordPress admin and public pages.'); ?>
-            </label>
+            <?php $show_lang_switcher = get_option('wp_language_show_switcher', 'on') == 'on' ? ' checked="checked"' : '';?>
+            <p style="margin: 10px 0;">
+            <label><input type="checkbox" id="wp_lang_show_hide_selector" <?php echo $show_lang_switcher; ?> onclick="wp_lang_show_hide_selector();"/> <?php echo __('Show a language selector in the WordPress admin bar', 'wordpress-language'); ?></label>
+            </p>
             
+            <p style="margin:0">
+            <label class="menu-name-label">
+                <input name="different_languages" type="radio" value="0" <?php if(!$different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
+                <?php _e('Use the same language for WordPress admin and public pages.', 'wordpress-language'); ?>
+            </label>            
+            </p>    
+            <p style="margin:5px 0 0 0">
+            <label class="menu-name-label">
+                <input name="different_languages" type="radio" value="1" <?php if($different_languages): ?>checked="checked"<?php endif; ?> />&nbsp;
+                <?php _e('Use different languages for WordPress admin and public pages.', 'wordpress-language'); ?>
+            </label>
+            </p>
             <br clear="all" />
-            <br />
             
             <div id="menu-management-liquid">
-                <div id="menu-management">            
+                <div id="menu-management" style="margin-right:10px;width:auto;">            
                     <div class="nav-tabs-nav" <?php if(empty($different_languages)): ?>style="display: none;"<?php endif; ?>>
                         <div class="nav-tabs-wrapper">
                             <div class="nav-tabs" style="padding: 0px; margin-right: -46px; margin-left: 0px;">
@@ -182,7 +189,7 @@ class WordPress_language_class {
                             </div>
                         </div>
                     </div>
-                    <div class="menu-edit" style="margin-right: 10px;">
+                    <div class="menu-edit" <?php if(version_compare($GLOBALS['wp_version'], '3.2.1', '<=')): ?>style="border-style:solid;border-radius:3px;border-width:1px;border-color:#DFDFDF;<?php endif;?>">
                         <div id="nav-menu-header">
                             &nbsp;                        
                         </div>
@@ -263,15 +270,15 @@ class WordPress_language_class {
                                     
                                         $langs = $this->get_languages(true);
                                 
-                                        if (!isset($_GET['more_langs']) || $_GET['more_langs'] != 1) {
-                                            echo '<a href="#" onclick="jQuery(\'#wp_lang_change_lang\').show(); return false;">' . __('Change language', 'wordpress-language') . '</a>';
-                                            echo '<div id="wp_lang_change_lang" style="display:none;">';
-                                        } else {
-                                            echo '<div id="wp_lang_change_lang">';
-                                        }
-                                            
+                                        $more_langs_on = isset($_GET['more_langs']) && $_GET['more_langs'] == 1;    
                                         ?>
 
+                                        
+                                        <a id="wp_lang_change_lang_button" href="#" <?php
+                                             if($more_langs_on): ?> style="display:none"<?php endif; ?>><?php _e('Change language', 'wordpress-language'); ?></a>
+                                        <div id="wp_lang_change_lang"<?php if(!$more_langs_on): ?> style="display:none"<?php endif; ?>>
+                                        
+                                        
                                         <br /><strong><?php echo __('Select a language', 'wordpress-language'); ?></strong>
                                     
                                         <div style="padding:10px;">
@@ -295,17 +302,10 @@ class WordPress_language_class {
                                                     </tr>
                                                 </table>
                                             </div>
-                                            <a href="#" class="button-secondary" onclick="jQuery('#wp_lang_change_lang').hide(); return false;"><?php echo __('Cancel', 'wordpress-language'); ?></a>
+                                            <a id="wp_lang_change_lang_cancel" href="#" class="button-secondary"><?php echo __('Cancel', 'wordpress-language'); ?></a>
                                         </div>
-                                    <?php echo '</div>'; ?>
-                                    
-                                        <?php if(empty($different_languages) || $this->current_scope == 'back-end'): ?>
-                                        <br />
-                                        <?php $show_lang_switcher = get_option('wp_language_show_switcher', 'on') == 'on' ? ' checked="checked"' : '';?>
-                                        <p><label><input type="checkbox" id="wp_lang_show_hide_selector" <?php echo $show_lang_switcher; ?> onclick="wp_lang_show_hide_selector();"/> <?php echo __('Show a language selector in the WordPress admin bar', 'wordpress-language'); ?></label>
-                                        <?php endif; ?>
-                                    
-                                        <?php
+                                    </div>
+                                    <?php
                                     }
                                 ?>
                                 
@@ -318,7 +318,7 @@ class WordPress_language_class {
                     </div>
                 </div>
             </div>
-
+            
             <br />
             <div id="wp_language_wpml_promotion" style="clear: both;">
                 <?php echo $this->wpml_promotion(); ?>
@@ -385,6 +385,9 @@ class WordPress_language_class {
             $current_locale = get_locale();
         }
         
+        
+        if($current_locale == 'en_US') return;
+        
         $current_lang_code = $this->get_lang_code($current_locale);
         $current_lang = $this->get_own_lang_name($current_lang_code);
         ?>
@@ -433,7 +436,7 @@ class WordPress_language_class {
     }
     
     function get_flag($lang_code) {
-        return '<img src="' . WP_LANG_URL . '/res/flags/' . $lang_code . '.png" /> ';
+        return '<img src="' . WP_LANG_URL . '/res/flags/' . $lang_code . '.png" width="18" height="12" alt="' . $lang_code . '" /> ';
     }
     
     function get_locale($lang_code) {
@@ -519,7 +522,7 @@ class WordPress_language_class {
 
                 function wp_lang_lang_switch() {
                     var locale = jQuery('input[name="wp_lang_locale\\[\\]"]:checked').val();
-                    window.location = wp_lang_switch_target + '&switch_to=' + locale + '&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val();
+                    window.location = wp_lang_switch_target + '&switch_to=' + locale + '&scope=<?php echo $this->current_scope ?>' + '&_wpnonce=' + jQuery('#wp_lang_get_lang_info').val();
                 }
                 
                 function getUrlVars(href) {
@@ -618,7 +621,7 @@ class WordPress_language_class {
             <li><img src="<?php echo WP_LANG_URL; ?>/res/img/checkmark-green.png"><?php echo __('<strong>Translation Management</strong> - easily add translations to content and receive complete reports about what needs updating.', 'wordpress-language'); ?></li>
             <li><img src="<?php echo WP_LANG_URL; ?>/res/img/checkmark-green.png"><?php echo __('<strong>Solid and compatible</strong> - with over 100,000 commercial multilingual sites, WPML is the de-facto standard for multilingual WordPress.', 'wordpress-language'); ?></li>
         </ul>
-        <br /><p><a href="http://wpml.org/?utm_source=wplanguage&utm_medium=plugin&utm_term=Learn%2Bmore&utm_content=Admin%2Bscreen&utm_campaign=wplanguage" class="button" target="_blank"><strong><?php echo __('Learn more', 'wordpress-language'); ?></strong></a> &nbsp; <a href="http://wpml.org/purchase/?utm_source=wplanguage&utm_medium=plugin&utm_term=Buy&utm_content=Admin%2Bscreen&utm_campaign=wplanguage" class="button-primary" target="_blank"><strong><?php echo __('Buy WPML', 'wordpress-language'); ?></strong></a></p>
+        <br /><p><a href="http://wpml.org/purchase/?utm_source=wplanguage&utm_medium=plugin&utm_term=Buy&utm_content=Admin%2Bscreen&utm_campaign=wplanguage" class="button-primary" target="_blank"><strong><?php echo __('Buy WPML', 'wordpress-language'); ?></strong></a>&nbsp;<a href="http://wpml.org/?utm_source=wplanguage&utm_medium=plugin&utm_term=Learn%2Bmore&utm_content=Admin%2Bscreen&utm_campaign=wplanguage" class="button" target="_blank"><strong><?php echo __('Learn more', 'wordpress-language'); ?></strong></a></p>
         </div>
         <?php
     }
@@ -633,11 +636,17 @@ class WordPress_language_class {
             $ST_MO_Downloader->load_xml();
             $lang_code = $this->get_lang_code($_POST['lang']);
             $locales = $ST_MO_Downloader->get_locales($lang_code);
+            
+            // Hardcoded default texts language
+            if($lang_code == 'en'){
+                $locales['en_US'] = true;
+            }
+
+            
             if (sizeof($locales) > 1 ) {
                 echo sprintf(__('We found several alternatives for %s translation. Choose which one you want to use:', 'wordpress-language'), $this->get_lang_name_in_current_locale($lang_code));
                 
-                $default_locale = $this->languages->get_locale($lang_code);
-                
+                $default_locale = $this->languages->get_locale($lang_code);                
                 ?>
                     <br />
                     <ul style="padding:10px">
@@ -687,6 +696,8 @@ class WordPress_language_class {
             }else{
                 $current_locale = get_locale();    
             }
+            
+            if($current_locale == 'en_US') {echo '1'; exit;}
             
             $current_lang_code = $this->get_lang_code($current_locale);
             $translations = $ST_MO_Downloader->get_translations($current_locale);

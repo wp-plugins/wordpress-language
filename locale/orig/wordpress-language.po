@@ -12,15 +12,6 @@ msgstr ""
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 
-msgid "Updated %s translation is available for WordPress %s."
-msgstr ""
-
-msgid "Review changes and update"
-msgstr ""
-
-msgid "No newer versions found."
-msgstr ""
-
 msgid "Failed downloading the language information file. Please go back and try a little later."
 msgstr ""
 
@@ -30,13 +21,16 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
+msgid "WordPress Language"
+msgstr ""
+
+msgid "Show a language selector in the WordPress admin bar"
+msgstr ""
+
 msgid "Current language is %s. Current locale is %s."
 msgstr ""
 
-msgid "Downloading and installing %s translations"
-msgstr ""
-
-msgid "Installed translation:"
+msgid "Current translation is from %s"
 msgstr ""
 
 msgid "Change language"
@@ -48,10 +42,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-msgid "Show a language selector in the WordPress admin bar"
-msgstr ""
-
-msgid "Available translation: New translation is available for"
+msgid "Updated translation is available."
 msgstr ""
 
 msgid "Update now"
@@ -66,10 +57,13 @@ msgstr ""
 msgid "Checking for updates..."
 msgstr ""
 
+msgid "Downloading and installing %s translations"
+msgstr ""
+
 msgid "Translations for %s installed."
 msgstr ""
 
-msgid "There is no translations available for %s."
+msgid "There is no translation available for %s."
 msgstr ""
 
 msgid "Fetching language information ..."
@@ -102,13 +96,31 @@ msgstr ""
 msgid "We found several alternatives for %s translation. Choose which one you want to use:"
 msgstr ""
 
-msgid "Are you sure you want to switch the site's language to %s?"
+msgid "Are you sure you want to switch the language to %s?"
 msgstr ""
 
 msgid "Switch language"
 msgstr ""
 
+msgid "Use the same language for WordPress admin and public pages."
+msgstr ""
+
+msgid "Use different languages for WordPress admin and public pages."
+msgstr ""
+
+msgid "Language for WordPress admin"
+msgstr ""
+
+msgid "Language for public pages"
+msgstr ""
+
 msgid "More languages..."
+msgstr ""
+
+msgid "Change language for public pages (currently %s %s - %s)"
+msgstr ""
+
+msgid "Language options"
 msgstr ""
 
 msgid "WordPress Language and WPML should not run together. Please %sdeactivate the WordPress Language plugin%s."
