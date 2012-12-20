@@ -12,8 +12,6 @@ class WP_languages {
             if(strpos($key,'Norwegian Bokm')===0){ $key = 'Norwegian Bokmål'; $lang_codes[$key] = 'nb';} // exception for norwegian
             if(strpos($key,'Portuguese, Portugal')===0){ $key = 'Portuguese'; $lang_codes[$key] = 'pt';}
             if(strpos($key,'Portuguese, Brazil')===0){ continue;}
-            if(strpos($key,'Chinese (Simplified)')===0){ $key = 'Chinese'; $lang_codes[$key] = 'zh';}
-            if(strpos($key,'Chinese (Traditional)')===0){ continue;}
             $default_locale = isset($lang_locales[$lang_codes[$key]]) ? $lang_locales[$lang_codes[$key]] : $lang_codes[$key];
             
             $this->lang_data[$lang_codes[$key]] = array('english_name'=>$key, 'code'=>$lang_codes[$key], 'major'=>$val['major'], 'active'=>0, 'default_locale'=>$default_locale, 'locales' => array($default_locale));
@@ -27,23 +25,20 @@ class WP_languages {
             if(strpos($lang,'Norwegian Bokm')===0){ $lang = 'Norwegian Bokmål'; $lang_codes[$lang] = 'nb';}
             if(strpos($lang,'Portuguese, Portugal')===0){ $lang = 'Portuguese'; $lang_codes[$lang] = 'pt';}
             if(strpos($lang,'Portuguese, Brazil')===0){ continue;}
-            if(strpos($lang,'Chinese (Simplified)')===0){ $lang = 'Chinese'; $lang_codes[$lang] = 'zh';}
-            if(strpos($lang,'Chinese (Traditional)')===0){ continue;}
             
             $this->lang_translations[$lang_codes[$lang]] = array();
             foreach($val['tr'] as $k=>$display){        
                 if(strpos($k,'Norwegian Bokm')===0){ $k = 'Norwegian Bokmål';}
                 if(strpos($k,'Portuguese, Portugal')===0){ $k = 'Portuguese';}
                 if(strpos($k,'Portuguese, Brazil')===0){ continue;}
-                if(strpos($k,'Chinese (Simplified)')===0){ $k = 'Chinese';}
-                if(strpos($k,'Chinese (Traditional)')===0){ continue;}
                 if(!trim($display)){
                     $display = $lang;
                 }
                 
                 $this->lang_translations[$lang_codes[$lang]][$lang_codes[$k]] = $display;
             }    
-        }        
+        }       
+        
     }
 
     function get_lang_code($find_locale) {
