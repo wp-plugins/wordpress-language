@@ -93,7 +93,7 @@ class ST_MO_Downloader{
         $locales_result = $this->xml->xpath($lang_code);
         if($locales_result){
             foreach($locales_result[0] as $locale => $data){
-                $locales[$this->lang_map_rev[$locale]] = $this->get_mo_file_urls($lang_code, $locale);    
+                $locales[$this->lang_map_rev[$locale]] = $this->get_mo_file_urls($lang_code, $locale);                    
             }    
         }
         return $locales;
