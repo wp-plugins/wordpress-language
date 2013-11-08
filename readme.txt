@@ -4,7 +4,7 @@ Donate link: http://wpml.org/documentation/related-projects/wordpress-language/
 Tags: localization, translation, i18n, language, gettext, mo, po, international
 License: GPLv2
 Requires at least: 3.2
-Tested up to: 3.6
+Tested up to: 3.7.1
 Stable tag: 1.1.1
 
 Run localized WordPress sites easily. Select the language and everything else happens automatically.
