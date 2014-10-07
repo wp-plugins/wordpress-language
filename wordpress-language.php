@@ -3,9 +3,9 @@
 Plugin Name: Wordpress Language
 Plugin URI: http://wpml.org/documentation/related-projects/wordpress-language/
 Description: Easily switch languages and download translations for WordPress. <a href="http://wpml.org/documentation/related-projects/wordpress-language/">Documentation</a>.
-Author: ICanLocalize
-Author URI: http://wpml.org
-Version: 1.1.2-dev
+Author: OnTheGoSystems
+Author URI: http://www.onthegosystems.com/
+Version: 1.1.2
 */
 
 if(defined('WP_LANGUAGE_VERSION')) return;

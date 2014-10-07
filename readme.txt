@@ -4,8 +4,8 @@ Donate link: http://wpml.org/documentation/related-projects/wordpress-language/
 Tags: localization, translation, i18n, language, gettext, mo, po, international
 License: GPLv2
 Requires at least: 3.2
-Tested up to: 3.7.1
-Stable tag: 1.1.1
+Tested up to: 4.0
+Stable tag: 1.2
 
 Run localized WordPress sites easily. Select the language and everything else happens automatically.
 
@@ -70,6 +70,11 @@ No. WordPress Language sets one single language for your site. For multilingual 
 1. Choose the admin language
 
 == Changelog ==
+
+= 1.2 =
+* Added support for Malay
+* Fixed various styling issues
+* Fixed a "Strict Standards" warning
 
 = 1.1.1 =
 * Allows to select different Chinese variants

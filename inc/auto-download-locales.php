@@ -26,7 +26,7 @@ class ST_MO_Downloader{
         while(list($locale, $code) = fgetcsv($fh)){
             $this->lang_map[$locale] = $code;            
         }   
-        $this->lang_map_rev =& array_flip($this->lang_map);
+        $this->lang_map_rev = array_flip($this->lang_map);
         
         
         $this->settings = get_option('icl_adl_settings');
@@ -195,82 +195,83 @@ class ST_MO_Downloader{
         
         // defaults
         $defaults = array(
-            'type'      => 'core'
+            'types'      => array('core')
         );
         
         extract($defaults);
         extract($args, EXTR_OVERWRITE);
+
+        if(!class_exists('WP_Http')) include_once ABSPATH . WPINC . '/class-http.php';
+        $client = new WP_Http();
         
-        if(isset($this->translation_files[$language][$type]['url'])){
-        
-            if(!class_exists('WP_Http')) include_once ABSPATH . WPINC . '/class-http.php';
-            $client = new WP_Http();
-            $response = $client->request($this->translation_files[$language][$type]['url'], array('timeout'=>15));
+        foreach($types as $type){
+            if(isset($this->translation_files[$language][$type]['url'])){
             
-            if(is_wp_error($response)){
-                $err = __('Error getting the translation file. Please go back and try again.', 'wordpress-language');
-                if(isset($response->errors['http_request_failed'][0])){
-                    $err .= '<br />' . $response->errors['http_request_failed'][0];
-                }
-                echo '<div class="error"><p>' . $err . '</p></div>';
-                return false;
+                $response = $client->request($this->translation_files[$language][$type]['url'], array('timeout'=>15));
                 
-            }        
-            
-            $mo = new MO();
-            $pomo_reader = new POMO_StringReader($response['body']);
-            $mo->import_from_reader( $pomo_reader );
-            
-            foreach($mo->entries as $key=>$v){
-                
-                $tpairs = array();
-                $v->singular = str_replace("\n",'\n', $v->singular);
-                $tpairs[] = array(
-                    'string'        => $v->singular, 
-                    'translation'   => $v->translations[0],
-                    'name'          => !empty($v->context) ? $v->context . ': ' . $v->singular : md5($v->singular)
-                );
-                
-                if($v->is_plural){
-                    $v->plural = str_replace("\n",'\n', $v->plural);
-                    $tpairs[] = array(
-                        'string'        => $v->plural, 
-                        'translation'   => !empty($v->translations[1]) ? $v->translations[1] : $v->translations[0],
-                        'name'          => !empty($v->context) ? $v->context . ': ' . $v->plural : md5($v->singular)
-                    );
-                }
-                
-                foreach($tpairs as $pair){
-                    $existing_translation = $wpdb->get_var($wpdb->prepare("
-                        SELECT st.value 
-                        FROM {$wpdb->prefix}icl_string_translations st
-                        JOIN {$wpdb->prefix}icl_strings s ON st.string_id = s.id
-                        WHERE s.context = %s AND s.name = %s AND st.language = %s 
-                    ", self::CONTEXT, $pair['name'], $language));
-                    
-                    if(empty($existing_translation)){
-                        $translations['new'][] = array(
-                                                'string'        => $pair['string'],
-                                                'translation'   => '',
-                                                'new'           => $pair['translation'],
-                                                'name'          => $pair['name']
-                        );
-                    }else{
-                        
-                        if(strcmp($existing_translation, $pair['translation']) !== 0){
-                            $translations['updated'][] = array(
-                                                'string'        => $pair['string'],
-                                                'translation'   => $existing_translation,
-                                                'new'           => $pair['translation'],
-                                                'name'          => $pair['name']
-                            );
-                        }
-                        
+                if(is_wp_error($response)){
+                    $err = __('Error getting the translation file. Please go back and try again.', 'wordpress-language');
+                    if(isset($response->errors['http_request_failed'][0])){
+                        $err .= '<br />' . $response->errors['http_request_failed'][0];
                     }
-                } 
+                    echo '<div class="error"><p>' . $err . '</p></div>';
+                    return false;
+                    
+                }        
+                
+                $mo = new MO();
+                $pomo_reader = new POMO_StringReader($response['body']);
+                $mo->import_from_reader( $pomo_reader );
+                
+                foreach($mo->entries as $key=>$v){
+                    
+                    $tpairs = array();
+                    $v->singular = str_replace("\n",'\n', $v->singular);
+                    $tpairs[] = array(
+                        'string'        => $v->singular, 
+                        'translation'   => $v->translations[0],
+                        'name'          => !empty($v->context) ? $v->context . ': ' . $v->singular : md5($v->singular)
+                    );
+                    
+                    if($v->is_plural){
+                        $v->plural = str_replace("\n",'\n', $v->plural);
+                        $tpairs[] = array(
+                            'string'        => $v->plural, 
+                            'translation'   => !empty($v->translations[1]) ? $v->translations[1] : $v->translations[0],
+                            'name'          => !empty($v->context) ? $v->context . ': ' . $v->plural : md5($v->singular)
+                        );
+                    }
+                    
+                    foreach($tpairs as $pair){
+                        $existing_translation = $wpdb->get_var($wpdb->prepare("
+                            SELECT st.value 
+                            FROM {$wpdb->prefix}icl_string_translations st
+                            JOIN {$wpdb->prefix}icl_strings s ON st.string_id = s.id
+                            WHERE s.context = %s AND s.name = %s AND st.language = %s 
+                        ", self::CONTEXT, $pair['name'], $language));
+                        
+                        if(empty($existing_translation)){
+                            $translations['new'][] = array(
+                                                    'string'        => $pair['string'],
+                                                    'translation'   => '',
+                                                    'new'           => $pair['translation'],
+                                                    'name'          => $pair['name']
+                            );
+                        }else{
+                            
+                            if(strcmp($existing_translation, $pair['translation']) !== 0){
+                                $translations['updated'][] = array(
+                                                    'string'        => $pair['string'],
+                                                    'translation'   => $existing_translation,
+                                                    'new'           => $pair['translation'],
+                                                    'name'          => $pair['name']
+                                );
+                            }
+                            
+                        }
+                    } 
+                }
             }
-        } else {
-            return false;
         }
         
         return $translations;
@@ -446,7 +447,7 @@ function wp_trans_register_string($context, $name, $value){
     
     $language = 'en'; // only register English strings.
     
-    $res = $wpdb->get_row("SELECT id, value, status, language FROM {$wpdb->prefix}icl_strings WHERE context='".$wpdb->escape($context)."' AND name='".$wpdb->escape($name)."'");
+    $res = $wpdb->get_row($wpdb->prepare("SELECT id, value, status, language FROM {$wpdb->prefix}icl_strings WHERE context=%s AND name=%s", $context, $name));
     if($res){
         $string_id = $res->id;
         $update_string = array();
@@ -483,7 +484,7 @@ function wp_trans_register_string($context, $name, $value){
 function wp_trans_add_string_translation($string_id, $language, $value = null, $status = false, $translator_id = null){
     global $wpdb;
     
-    $res = $wpdb->get_row("SELECT id, value, status FROM {$wpdb->prefix}icl_string_translations WHERE string_id='".$wpdb->escape($string_id)."' AND language='".$wpdb->escape($language)."'");
+    $res = $wpdb->get_row($wpdb->prepare("SELECT id, value, status FROM {$wpdb->prefix}icl_string_translations WHERE string_id=%d AND language=%s", $string_id, $language));
     
     // the same string should not be sent two times to translation
     if(isset($res->status) && $res->status == ICL_STRING_TRANSLATION_WAITING_FOR_TRANSLATOR && is_null($value)){

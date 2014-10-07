@@ -7,6 +7,7 @@ class WordPress_language_class {
         
         add_action('init', array($this, 'init'));
         add_filter('locale', array($this, 'locale'));
+        add_action('init', array($this, 'load_css_and_js'));
         
         $this->language_switched = false;
         $this->download_lang = null;
@@ -49,6 +50,11 @@ class WordPress_language_class {
         add_filter('gettext', array($this, 'icl_sw_filters_gettext'), 9, 3);
         
         
+    }
+
+    function load_css_and_js(){
+        wp_register_style('wordpress-language', WP_LANG_URL . '/res/css/style.css', array(), WP_LANGUAGE_VERSION);
+        wp_enqueue_style('wordpress-language');
     }
 
     function save_selected_locale() {
@@ -168,21 +174,21 @@ class WordPress_language_class {
             <br clear="all" />
             
             <div id="menu-management-liquid">
-                <div id="menu-management" style="margin-right:10px;width:auto;">            
+                <div id="menu-management">
                     <div class="nav-tabs-nav" <?php if(empty($different_languages)): ?>style="display: none;"<?php endif; ?>>
                         <div class="nav-tabs-wrapper">
-                            <div class="nav-tabs" style="padding: 0px; margin-right: -46px; margin-left: 0px;">
+                            <div class="nav-tabs">
                                 <span id="nav-tab-back-end" class="nav-tab<?php if($this->current_scope == 'back-end'): ?> nav-tab-active<?php endif ?>">
                                     <?php echo $this->get_flag($current_lang_code_back) ?>
                                     <?php if($this->current_scope != 'back-end'): ?>
-                                        <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language') ?>"><?php endif; ?>
+                                        <a  href="<?php echo admin_url('options-general.php?page=wordpress_language') ?>"><?php endif; ?>
                                         <?php _e('Language for WordPress admin', 'wordpress-language') ?>
                                     <?php if($this->current_scope != 'back-end'): ?></a><?php endif; ?>                                        
                                 </span>
                                 <span id="nav-tab-front-end" class="nav-tab<?php if($this->current_scope == 'front-end'): ?> nav-tab-active<?php endif ?>">
                                     <?php echo $this->get_flag($current_lang_code_front) ?>
                                     <?php if($this->current_scope != 'front-end'): ?>
-                                        <a style="text-decoration: none" href="<?php echo admin_url('options-general.php?page=wordpress_language&scope=front-end') ?>"><?php endif; ?>
+                                        <a href="<?php echo admin_url('options-general.php?page=wordpress_language&scope=front-end') ?>"><?php endif; ?>
                                         <?php _e('Language for public pages', 'wordpress-language') ?>
                                     <?php if($this->current_scope != 'front-end'): ?></a><?php endif; ?>                                        
                                 </span>                                
@@ -193,7 +199,7 @@ class WordPress_language_class {
                         <div id="nav-menu-header">
                             &nbsp;                        
                         </div>
-                        <div id="post-body" style="border-style: solid;border-width: 1px 0;padding: 10px;">
+                        <div id="post-body">
                             <div id="post-body-content">
                                 <p><?php echo sprintf(__('Current language is %s. Current locale is %s.', 'wordpress-language'), 
                                         $this->get_flag($current_lang_code) . $current_lang, $current_locale) ?></p>
@@ -281,8 +287,8 @@ class WordPress_language_class {
                                         
                                         <br /><strong><?php echo __('Select a language', 'wordpress-language'); ?></strong>
                                     
-                                        <div style="padding:10px;">
-                                            <div class="wp_lang_thickbox" style="padding-bottom:10px">
+                                        <div class="wp_lang_thickbox_main">
+                                            <div class="wp_lang_thickbox">
                                                 <table cellpadding="3">
                                                     <tr>
                                                     <?php
@@ -320,7 +326,7 @@ class WordPress_language_class {
             </div>
             
             <br />
-            <div id="wp_language_wpml_promotion" style="clear: both;">
+            <div id="wp_language_wpml_promotion">
                 <?php echo $this->wpml_promotion(); ?>
             </div>
             
@@ -350,7 +356,7 @@ class WordPress_language_class {
                 <div id="wordpress_language_update_to_date">
                     <p><?php echo __('Your site\'s translation is up-to-date.', 'wordpress-language'); ?> <a href="#" onclick="wp_lang_check_for_updates(); return false"><?php echo __('check for updates', 'wordpress-language'); ?></a></p>
                 </div>
-                <div id="wordpress_language_check_for_updates" style="display:none">
+                <div id="wordpress_language_check_for_updates">
                     <p><strong><?php echo __('Checking for updates...', 'wordpress-language'); ?></strong> <img src="<?php echo WP_LANG_URL; ?>/res/img/ajax-loader-big.gif"></p>
                 </div>
                 <script type="text/javascript">
@@ -504,7 +510,7 @@ class WordPress_language_class {
     
     
     function render_lang_switch_popup() {
-        echo '<div id="wp_lang_switch_popup" style="display:none;"><div id="wp_lang_switch_form" style="padding:20px;">';
+        echo '<div id="wp_lang_switch_popup" ><div id="wp_lang_switch_form" >';
         echo '<strong>' . __('Fetching language information ...', 'wordpress-language') . '</strong> <img src="' . WP_LANG_URL. '/res/img/ajax-loader-big.gif">';
         echo '</div>';
         wp_nonce_field('wp_lang_get_lang_info', 'wp_lang_get_lang_info');
@@ -571,6 +577,7 @@ class WordPress_language_class {
                                 },
                                 success: function (data) {
                                     jQuery('#wp_lang_switch_form').html(data);
+                                    jQuery('#TB_ajaxContent').css('width',jQuery('#TB_window').width()-20);
                                 }
                             });
                         }
@@ -607,7 +614,7 @@ class WordPress_language_class {
     
     function wpml_promotion() {
         ?>
-        <div style="margin:3em 1em 1em 0em; padding: 1em; border: 1pt solid #E0E0E0; background-color: #F4F4F4;">
+        <div class="wpml-promotion-block" >
 
         <p><h3><?php echo __('Did you know that a single WordPress site can have multiple languages?', 'wordpress-language'); ?></h3></p>
 
@@ -616,7 +623,7 @@ class WordPress_language_class {
                                     '</a>'); ?></p>
         
         <p><?php echo __('Key features:', 'wordpress-language'); ?></p>
-        <ul style="padding-left:20px;">
+        <ul>
             <li><img src="<?php echo WP_LANG_URL; ?>/res/img/checkmark-green.png"><?php echo __('<strong>SEO friendly</strong> - languages will have their unique URLs, including different slugs for different translations. You can put languages in different domains or virtual directories.', 'wordpress-language'); ?></li>
             <li><img src="<?php echo WP_LANG_URL; ?>/res/img/checkmark-green.png"><?php echo __('<strong>Translation Management</strong> - easily add translations to content and receive complete reports about what needs updating.', 'wordpress-language'); ?></li>
             <li><img src="<?php echo WP_LANG_URL; ?>/res/img/checkmark-green.png"><?php echo __('<strong>Solid and compatible</strong> - with over 100,000 commercial multilingual sites, WPML is the de-facto standard for multilingual WordPress.', 'wordpress-language'); ?></li>
@@ -691,6 +698,7 @@ class WordPress_language_class {
             $ST_MO_Downloader->load_xml();
             $ST_MO_Downloader->get_translation_files();
             
+            
             if(isset($_POST['scope']) && $_POST['scope']=='front-end'){
                 $current_locale = get_option('wp_language_locale_front');
             }else{
@@ -700,7 +708,7 @@ class WordPress_language_class {
             if($current_locale == 'en_US') {echo '1'; exit;}
             
             $current_lang_code = $this->get_lang_code($current_locale);
-            $translations = $ST_MO_Downloader->get_translations($current_locale);
+            $translations = $ST_MO_Downloader->get_translations($current_locale, array('types'=>array('admin', 'core')));
             
             if ($translations !== false) {
                 if (isset($translations['new'])) {
