@@ -57,7 +57,13 @@ class WP_languages {
     }
 
     function get_lang_name($lang_code) {
-        return $this->lang_data[$lang_code]['english_name'];
+
+        if( isset($this->lang_data[$lang_code]['english_name']) ){
+            return $this->lang_data[$lang_code]['english_name'];
+        }else{
+            return '';
+        }
+
     }
     
     function get_own_lang_name($lang_code) {
@@ -65,7 +71,7 @@ class WP_languages {
             $lang_name = $this->lang_translations[$lang_code][$lang_code];
         } else {
             // we don't have a translation so use english name
-            $lang_name = $this->get_lang_name();
+            $lang_name = $this->get_lang_name($lang_code);
         }
         
         return $lang_name;

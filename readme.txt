@@ -5,7 +5,7 @@ Tags: localization, translation, i18n, language, gettext, mo, po, international
 License: GPLv2
 Requires at least: 3.2
 Tested up to: 4.0
-Stable tag: 1.2
+Stable tag: 1.2.1
 
 Run localized WordPress sites easily. Select the language and everything else happens automatically.
 
@@ -70,6 +70,9 @@ No. WordPress Language sets one single language for your site. For multilingual 
 1. Choose the admin language
 
 == Changelog ==
+
+= 1.2.1 =
+* Fixed warning for get_lang_name() function
 
 = 1.2 =
 * Added support for Malay
