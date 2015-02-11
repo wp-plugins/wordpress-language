@@ -11,6 +11,8 @@ Run localized WordPress sites easily. Select the language and everything else ha
 
 == Description ==
 
+**End of development: as of version 1.2.1, we're not continuing the development on this plugin. This doesn't mean that it's broken. The recent WordPress development covers to a good degree the functionality in this plugin. However, in order to build and run multilingual websites, [WPML](http://wpml.org) includes everything that you need.** 
+
 WordPress Language plugin lets you easily run localized WordPress sites. It will change the WordPress language, without having to install translation files or edit PHP.
 
 * Adds a language switcher to the WordPress admin bar
